@@ -31,8 +31,8 @@ func start(args []string) {
 		serverPortUsage:    "server port, ':8080'",
 		serverTLSPort:      ":8443",
 		serverTLSPortUsage: "server TLS port, ':8443'",
-		targetURL:          "http://ecgo:8081",
-		targetUsage:        "redirect url, 'http://ecgo:8081'",
+		targetURL:          "http://ecgo:8080",
+		targetUsage:        "redirect url, 'http://ecgo:8080'",
 	}
 
 	redisURL := flag.String("redisURL", config.serverPort, config.serverPortUsage)
