@@ -22,6 +22,10 @@ func New(target string) *Proxy {
 // Handler for serving requests
 func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("powered-by", "go-ocelot")
-	r.Header.Add("x-forwarded-proto", r.Proto)
+	if r.TLS != nil {
+		r.Header.Add("x-forwarded-proto", "https")
+	} else {
+		r.Header.Add("x-forwarded-proto", "http")
+	}
 	p.proxy.ServeHTTP(w, r)
 }
