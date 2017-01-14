@@ -27,15 +27,12 @@ func main() {
 
 func start(args []string) {
 	config := &Config{
-		serverPort:         ":8080",
-		serverPortUsage:    "server port, ':8080'",
-		serverTLSPort:      ":8443",
-		serverTLSPortUsage: "server TLS port, ':8443'",
-		targetURL:          "http://ecgo:8080",
-		targetUsage:        "redirect url, 'http://ecgo:8080'",
+		serverPort:    ":8080",
+		serverTLSPort: ":8443",
+		targetURL:     "http://ecgo:8080",
 	}
 
-	redisURL := flag.String("redisURL", config.serverPort, config.serverPortUsage)
+	redisURL := flag.String("redisURL", "redis:6379", "redis url, 'redis:6379'")
 
 	flag.Parse()
 

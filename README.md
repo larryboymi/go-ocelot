@@ -11,7 +11,7 @@ Currently under development (Jan 12, 2017)
 ## Docker
 1. Build the image
 
-        $ docker build --build-arg GO_MAIN=github.com/larryboymi/go-ocelot -t go-ocelot:dev .
+        $ docker build --build-arg GO_MAIN=github.com/larryboymi/go-ocelot --build-arg GO_MAIN_EXEC=go-ocelot -t go-ocelot:dev .
 
 2. To run using docker:
 

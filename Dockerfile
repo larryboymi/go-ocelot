@@ -3,6 +3,7 @@ MAINTAINER Larry Anderson <larryboymi@hotmail.com>
 
 ARG GO_MAIN
 ARG GO_MAIN_EXEC
+ENV GO_MAIN_EXEC ${GO_MAIN_EXEC:-go-ocelot}
 
 RUN apk add --no-cache git \
     && go get $GO_MAIN \
@@ -15,4 +16,4 @@ COPY ./key.pem /go/bin
 
 WORKDIR /go/bin
 
-CMD ./$GO_MAIN_EXEC
+CMD ${GO_MAIN_EXEC}
