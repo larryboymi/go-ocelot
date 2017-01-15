@@ -1,6 +1,9 @@
 package poller
 
 import (
+	"net/http/httputil"
+	"net/url"
+
 	"github.com/docker/docker/api/types/swarm"
 
 	"github.com/larryboymi/go-ocelot/docker"
@@ -27,9 +30,13 @@ func parseRoutes(services []swarm.Service) []types.Route {
 	var serviceList []types.Route
 
 	for _, s := range services {
+		urlStr := s.Spec.Annotations.Name + ":" + s.Spec.Annotations.Labels["ingressport"]
+		url, _ := url.Parse(urlStr)
+
 		serviceList = append(serviceList, types.Route{
 			ID:        s.Spec.Annotations.Name,
-			TargetURL: s.Spec.Annotations.Name,
+			TargetURL: urlStr,
+			Proxy:     httputil.NewSingleHostReverseProxy(url),
 		})
 	}
 	return serviceList

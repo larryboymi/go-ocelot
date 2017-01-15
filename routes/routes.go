@@ -3,6 +3,7 @@ package routes
 import (
 	"encoding/json"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/larryboymi/go-ocelot/cache"
@@ -18,9 +19,26 @@ type Synchronizer struct {
 	routes      map[string]types.Route
 }
 
-func (r *Synchronizer) syncRoutes() {
+// Routes accessor
+func (s *Synchronizer) Routes() map[string]types.Route {
+	return s.routes
+}
+
+// Handler for serving requests
+func (s *Synchronizer) Handler(w http.ResponseWriter, req *http.Request) {
+	log.Printf("Routing for %s", req.URL.Path)
+	w.Header().Set("powered-by", "go-ocelot")
+	if req.TLS != nil {
+		req.Header.Add("x-forwarded-proto", "https")
+	} else {
+		req.Header.Add("x-forwarded-proto", "http")
+	}
+	s.routes["ecgo"].Proxy.ServeHTTP(w, req)
+}
+
+func (s *Synchronizer) syncRoutes() {
 	var routes []types.Route
-	routesJSON, getErr := r.cache.Get("routes")
+	routesJSON, getErr := s.cache.Get("routes")
 
 	if getErr != nil {
 		log.Printf("Error loading routes: %v", getErr)
@@ -34,12 +52,12 @@ func (r *Synchronizer) syncRoutes() {
 		return
 	}
 
-	r.UpdateRoutes(routes)
+	s.UpdateRoutes(routes)
 	log.Printf("Updated routes successfully")
 }
 
 // UpdateTable is an atomic operation to update the routing table
-func (r *Synchronizer) UpdateRoutes(routes []types.Route) {
+func (s *Synchronizer) UpdateRoutes(routes []types.Route) {
 	newTable := make(map[string]types.Route)
 
 	for _, s := range routes {
@@ -47,12 +65,12 @@ func (r *Synchronizer) UpdateRoutes(routes []types.Route) {
 		newTable[s.ID] = s
 	}
 
-	r.routes = newTable
+	s.routes = newTable
 }
 
-func (r *Synchronizer) updateRoutes() {
+func (s *Synchronizer) updateRoutes() {
 	log.Print("Updating routes")
-	routes := r.routePoller.Load()
+	routes := s.routePoller.Load()
 
 	json, err := json.Marshal(routes)
 
@@ -61,29 +79,29 @@ func (r *Synchronizer) updateRoutes() {
 		return
 	}
 
-	if cacheError := r.cache.Set("routes", string(json)); cacheError != nil {
+	if cacheError := s.cache.Set("routes", string(json)); cacheError != nil {
 		log.Printf("Error storing routes in cache: %v", cacheError)
-	} else {
-		log.Printf("Stored routes in cache: %s", string(json))
 	}
 }
 
 // Start causes the collector to begin polling docker
-func (r *Synchronizer) Start() {
+func (s *Synchronizer) Start() {
 	go func() {
-		r.syncRoutes()
+		s.syncRoutes()
 		for {
-			err := r.cache.Subscribe("go-ocelot", r.syncRoutes)
+			err := s.cache.Subscribe("go-ocelot", s.syncRoutes)
 			log.Printf("Subscription to updates lost, retrying in 10 seconds: %v", err)
 			time.Sleep(10 * time.Second)
 		}
 	}()
 
-	r.updateRoutes()
+	go func() {
+		s.updateRoutes()
 
-	for range time.Tick(r.interval * time.Second) {
-		r.updateRoutes()
-	}
+		for range time.Tick(s.interval * time.Second) {
+			s.updateRoutes()
+		}
+	}()
 }
 
 // New returns a new instance of the collector

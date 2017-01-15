@@ -7,18 +7,13 @@ import (
 	"net/http"
 	"os"
 
-	pxy "github.com/larryboymi/go-ocelot/proxy"
 	"github.com/larryboymi/go-ocelot/routes"
 )
 
 // Config type
 type Config struct {
-	serverPort         string
-	serverPortUsage    string
-	serverTLSPort      string
-	serverTLSPortUsage string
-	targetURL          string
-	targetUsage        string
+	serverPort    string
+	serverTLSPort string
 }
 
 func main() {
@@ -27,9 +22,8 @@ func main() {
 
 func start(args []string) {
 	config := &Config{
-		serverPort:    ":8080",
-		serverTLSPort: ":8443",
-		targetURL:     "http://ecgo:8080",
+		serverPort:    "0.0.0.0:8080",
+		serverTLSPort: "0.0.0.0:8443",
 	}
 
 	redisURL := flag.String("redisURL", "redis:6379", "redis url, 'redis:6379'")
@@ -37,11 +31,12 @@ func start(args []string) {
 	flag.Parse()
 
 	fmt.Println(fmt.Sprintf("running on HTTP: %s, TLS: %s", config.serverPort, config.serverTLSPort))
-	fmt.Println(fmt.Sprintf("redirect to : %s", config.targetURL))
 
-	proxy := pxy.New(config.targetURL)
+	//  Start Route Synchronizer
+	synchronizer := routes.New(10, *redisURL)
+	synchronizer.Start()
 
-	http.HandleFunc("/", proxy.Handler)
+	http.HandleFunc("/", synchronizer.Handler)
 
 	//  Start HTTP
 	go func() {
@@ -50,10 +45,6 @@ func start(args []string) {
 			log.Fatal("HTTP Serving Error: ", errHTTP)
 		}
 	}()
-
-	//  Start Route Synchronizer
-	synchronizer := routes.New(10, *redisURL)
-	synchronizer.Start()
 
 	// Start TLS
 	errTLS := http.ListenAndServeTLS(config.serverTLSPort, "cert.pem", "key.pem", nil)
