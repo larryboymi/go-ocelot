@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"time"
 
 	"github.com/larryboymi/go-ocelot/cache"
@@ -56,12 +58,14 @@ func (s *Synchronizer) syncRoutes() {
 	log.Printf("Updated routes successfully")
 }
 
-// UpdateTable is an atomic operation to update the routing table
+// UpdateRoutes is an atomic operation to update the routing table
 func (s *Synchronizer) UpdateRoutes(routes []types.Route) {
 	newTable := make(map[string]types.Route)
 
 	for _, s := range routes {
 		log.Printf("Saving route %s", s.ID)
+		url, _ := url.Parse(s.TargetURL)
+		s.Proxy = httputil.NewSingleHostReverseProxy(url)
 		newTable[s.ID] = s
 	}
 
