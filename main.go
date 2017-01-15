@@ -51,11 +51,9 @@ func start(args []string) {
 		}
 	}()
 
-	//  Start Route Maintainer
-	go func() {
-		routeMaintainer := routes.New(10, *redisURL)
-		routeMaintainer.Start()
-	}()
+	//  Start Route Synchronizer
+	synchronizer := routes.New(10, *redisURL)
+	synchronizer.Start()
 
 	// Start TLS
 	errTLS := http.ListenAndServeTLS(config.serverTLSPort, "cert.pem", "key.pem", nil)
