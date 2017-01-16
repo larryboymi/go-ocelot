@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/larryboymi/go-ocelot/proxy"
 	"github.com/larryboymi/go-ocelot/routes"
 )
 
@@ -36,7 +37,9 @@ func start(args []string) {
 	synchronizer := routes.New(10, *redisURL)
 	synchronizer.Start()
 
-	http.HandleFunc("/", synchronizer.Handler)
+	proxy := proxy.New(&synchronizer)
+
+	http.HandleFunc("/", proxy.Handler)
 
 	//  Start HTTP
 	go func() {

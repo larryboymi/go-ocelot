@@ -1,11 +1,14 @@
+/*
+Package routes helps to maintain a set of routes retrieved from the Docker sock
+*/
 package routes
 
 import (
 	"encoding/json"
 	"log"
-	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/larryboymi/go-ocelot/cache"
@@ -13,29 +16,25 @@ import (
 	"github.com/larryboymi/go-ocelot/types"
 )
 
-// Synchronizer
+// Synchronizer is the type that maintains the route set from Docker sock.
 type Synchronizer struct {
 	interval    time.Duration
 	cache       cache.Cache
 	routePoller poller.Poller
-	routes      map[string]types.Route
+	routes      *SafeRoutes
+}
+
+// SafeRoutes helps to ensure only one thread is accessing routes via mutex
+type SafeRoutes struct {
+	routes map[string]types.Route
+	mux    sync.Mutex
 }
 
 // Routes accessor
 func (s *Synchronizer) Routes() map[string]types.Route {
-	return s.routes
-}
-
-// Handler for serving requests
-func (s *Synchronizer) Handler(w http.ResponseWriter, req *http.Request) {
-	log.Printf("Routing for %s", req.URL.Path)
-	w.Header().Set("powered-by", "go-ocelot")
-	if req.TLS != nil {
-		req.Header.Add("x-forwarded-proto", "https")
-	} else {
-		req.Header.Add("x-forwarded-proto", "http")
-	}
-	s.routes["ecgo"].Proxy.ServeHTTP(w, req)
+	s.routes.mux.Lock()
+	defer s.routes.mux.Unlock()
+	return s.routes.routes
 }
 
 func (s *Synchronizer) syncRoutes() {
@@ -69,7 +68,9 @@ func (s *Synchronizer) UpdateRoutes(routes []types.Route) {
 		newTable[s.ID] = s
 	}
 
-	s.routes = newTable
+	s.routes.mux.Lock()
+	s.routes.routes = newTable
+	s.routes.mux.Unlock()
 }
 
 func (s *Synchronizer) updateRoutes() {
@@ -82,14 +83,16 @@ func (s *Synchronizer) updateRoutes() {
 		log.Printf("Error marshalling routes to JSON: %v", err)
 		return
 	}
-
 	if cacheError := s.cache.Set("routes", string(json)); cacheError != nil {
 		log.Printf("Error storing routes in cache: %v", cacheError)
+	} else {
+		log.Printf("Stored routes in cache: %s", string(json))
 	}
 }
 
-// Start causes the collector to begin polling docker
+// Start causes the Synchronizer to begin polling docker
 func (s *Synchronizer) Start() {
+	// This thread will continually get the routes from the cache and make them available
 	go func() {
 		s.syncRoutes()
 		for {
@@ -99,6 +102,7 @@ func (s *Synchronizer) Start() {
 		}
 	}()
 
+	// This thread will continually get the routes from the Docker sock and set them in the cache
 	go func() {
 		s.updateRoutes()
 
@@ -108,11 +112,12 @@ func (s *Synchronizer) Start() {
 	}()
 }
 
-// New returns a new instance of the collector
+// New returns a new instance of the synchronizer
 func New(interval int, redis string) Synchronizer {
 	return Synchronizer{
 		interval:    time.Duration(interval),
 		cache:       cache.New(redis),
 		routePoller: poller.New(),
+		routes:      &SafeRoutes{mux: sync.Mutex{}},
 	}
 }
