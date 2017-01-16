@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 
+	service "github.com/larryboymi/go-ocelot/api"
+	"github.com/larryboymi/go-ocelot/middleware"
 	"github.com/larryboymi/go-ocelot/proxy"
 	"github.com/larryboymi/go-ocelot/routes"
 )
@@ -39,18 +41,25 @@ func start(args []string) {
 
 	proxy := proxy.New(&synchronizer)
 
-	http.HandleFunc("/", proxy.Handler)
+	api := service.New(&synchronizer)
+
+	mux := http.NewServeMux()
+	mux.Handle("/api/", api.Mux())
+	mux.HandleFunc("/", proxy.Handler)
+
+	loggedHandler := middleware.LoggedHandler(mux)
+	headeredHandler := middleware.HeaderedHandler(loggedHandler)
 
 	//  Start HTTP
 	go func() {
-		errHTTP := http.ListenAndServe(config.serverPort, nil)
+		errHTTP := http.ListenAndServe(config.serverPort, headeredHandler)
 		if errHTTP != nil {
 			log.Fatal("HTTP Serving Error: ", errHTTP)
 		}
 	}()
 
 	// Start TLS
-	errTLS := http.ListenAndServeTLS(config.serverTLSPort, "cert.pem", "key.pem", nil)
+	errTLS := http.ListenAndServeTLS(config.serverTLSPort, "cert.pem", "key.pem", headeredHandler)
 	if errTLS != nil {
 		log.Fatal("TLS Serving Error: ", errTLS)
 	}
