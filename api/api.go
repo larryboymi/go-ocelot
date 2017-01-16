@@ -38,10 +38,22 @@ func (a API) echo(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
+func (a API) routes(w http.ResponseWriter, r *http.Request) {
+	js, err := json.Marshal(a.sync.Routes())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+}
+
 // Mux returns the path multiplexer for the API
 func (a API) Mux() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/echo", a.echo)
+	mux.HandleFunc("/api/v1/routes", a.routes)
 	return mux
 }
 
