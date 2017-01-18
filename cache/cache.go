@@ -8,7 +8,7 @@ import (
 )
 
 type Cache interface {
-	Set(string, string) error
+	SetField(string, string, string) error
 	Get(string) ([]byte, error)
 	Subscribe(string, func()) error
 }
@@ -18,13 +18,13 @@ type PoolWrapper struct {
 	pool *redis.Pool
 }
 
-// Set sets a key to a value
-func (c *PoolWrapper) Set(key, value string) error {
+// SetField sets a key to a value
+func (c *PoolWrapper) SetField(key, field, value string) error {
 	conn := c.pool.Get()
 	defer conn.Close()
 
 	conn.Send("PUBLISH", "go-ocelot", "updated")
-	if _, err := conn.Do("SET", key, value); err != nil {
+	if _, err := conn.Do("HSET", key, field, value); err != nil {
 		return err
 	}
 	return nil
@@ -55,7 +55,7 @@ func (c *PoolWrapper) Get(key string) ([]byte, error) {
 	conn := c.pool.Get()
 	defer conn.Close()
 
-	result, err := conn.Do("GET", key)
+	result, err := conn.Do("HGETALL", key)
 	if err != nil {
 		return s, err
 	}

@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http/httputil"
 	"net/url"
+	"regexp"
 	"sync"
 	"time"
 
@@ -59,34 +60,44 @@ func (s *Synchronizer) syncRoutes() {
 
 // UpdateRoutes is an atomic operation to update the routing table
 func (s *Synchronizer) UpdateRoutes(routes []types.Route) {
-	newTable := make(map[string]types.Route)
-
-	for _, s := range routes {
-		log.Printf("Saving route %s", s.ID)
-		url, _ := url.Parse(s.TargetURL)
-		s.Proxy = httputil.NewSingleHostReverseProxy(url)
-		newTable[s.ID] = s
+	for _, route := range routes {
+		s.UpdateRoute(route)
 	}
+}
 
+// UpdateRoute updates a route both in redis and in memory
+func (s *Synchronizer) UpdateRoute(route types.Route) {
+	var err error
 	s.routes.mux.Lock()
-	s.routes.routes = newTable
-	s.routes.mux.Unlock()
+	defer s.routes.mux.Unlock()
+	url, _ := url.Parse(route.TargetURL)
+	route.Regexp, err = regexp.Compile(route.IncomingMatch)
+	if err != nil {
+		log.Printf("Error compiling regexp for %s: %v", route.ID, err)
+		err = nil
+	}
+	route.Proxy = httputil.NewSingleHostReverseProxy(url)
+	json, err := json.Marshal(route)
+	if err != nil {
+		log.Printf("Error marshalling route to JSON: %v", err)
+		return
+	}
+	if cacheError := s.cache.SetField("routes", route.ID, string(json)); cacheError != nil {
+		log.Printf("Error storing route in cache: %v", cacheError)
+	} else {
+		log.Printf("Stored route in cache: %s", string(json))
+		s.routes.routes[route.ID] = route
+	}
 }
 
 func (s *Synchronizer) updateRoutes() {
 	log.Print("Updating routes")
-	routes := s.routePoller.Load()
-
-	json, err := json.Marshal(routes)
-
-	if err != nil {
-		log.Printf("Error marshalling routes to JSON: %v", err)
-		return
-	}
-	if cacheError := s.cache.Set("routes", string(json)); cacheError != nil {
-		log.Printf("Error storing routes in cache: %v", cacheError)
-	} else {
-		log.Printf("Stored routes in cache: %s", string(json))
+	dockerRoutes := s.routePoller.Load()
+	for _, dockerRoute := range dockerRoutes {
+		// If route in memory doesn't exist, update redis, then add to memory
+		if s.routes.routes[dockerRoute.ID].ID == "" {
+			s.UpdateRoute(dockerRoute)
+		}
 	}
 }
 
@@ -118,6 +129,6 @@ func New(interval int, redis string) Synchronizer {
 		interval:    time.Duration(interval),
 		cache:       cache.New(redis),
 		routePoller: poller.New(),
-		routes:      &SafeRoutes{mux: sync.Mutex{}},
+		routes:      &SafeRoutes{routes: make(map[string]types.Route), mux: sync.Mutex{}},
 	}
 }

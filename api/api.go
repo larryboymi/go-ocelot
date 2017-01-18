@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/larryboymi/go-ocelot/routes"
+	"github.com/larryboymi/go-ocelot/types"
 )
 
 // Service is the interface for stored services
@@ -53,23 +54,42 @@ func (a API) routes(w http.ResponseWriter, r *http.Request) {
 		// Give an error message.
 	}
 }
+
+func (a API) putRoute(w http.ResponseWriter, r *http.Request) {
+	var route types.Route
+	if r.Body == nil {
+		http.Error(w, "Please send a request body", 400)
+		return
+	}
+	err := json.NewDecoder(r.Body).Decode(&route)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	a.sync.UpdateRoute(route)
+}
+
 func (a API) getRoutes(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimPrefix(r.URL.Path, "/api/v1/routes/")
 
 	var js []byte
 	var err error
-	if id != r.URL.Path && id != "" {
+	routes := a.sync.Routes()
+
+	if id == "" {
+		js, err = json.Marshal(a.sync.Routes())
+	} else if route := routes[id]; route.ID != "" {
 		log.Printf("Trying to GET route for %s", id)
 		js, err = json.Marshal(a.sync.Routes()[id])
 	} else {
-		js, err = json.Marshal(a.sync.Routes())
+		http.NotFound(w, r)
+		return
 	}
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
 }
