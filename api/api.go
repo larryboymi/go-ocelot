@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -39,7 +40,31 @@ func (a API) echo(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a API) routes(w http.ResponseWriter, r *http.Request) {
-	js, err := json.Marshal(a.sync.Routes())
+	switch r.Method {
+	case "GET":
+		a.getRoutes(w, r)
+	case "POST":
+		// Create a new record.
+	case "PUT":
+		// Update an existing record.
+	case "DELETE":
+		// Remove the record.
+	default:
+		// Give an error message.
+	}
+}
+func (a API) getRoutes(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimPrefix(r.URL.Path, "/api/v1/routes/")
+
+	var js []byte
+	var err error
+	if id != r.URL.Path && id != "" {
+		log.Printf("Trying to GET route for %s", id)
+		js, err = json.Marshal(a.sync.Routes()[id])
+	} else {
+		js, err = json.Marshal(a.sync.Routes())
+	}
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -53,7 +78,7 @@ func (a API) routes(w http.ResponseWriter, r *http.Request) {
 func (a API) Mux() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/v1/echo", a.echo)
-	mux.HandleFunc("/api/v1/routes", a.routes)
+	mux.HandleFunc("/api/v1/routes/", a.routes)
 	return mux
 }
 
