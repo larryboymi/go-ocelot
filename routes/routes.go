@@ -5,7 +5,9 @@ package routes
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
+	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"regexp"
@@ -38,7 +40,7 @@ func (s *Synchronizer) Routes() map[string]types.Route {
 	return s.routes.routes
 }
 
-func (s *Synchronizer) syncRoutes() {
+func (s *Synchronizer) syncRoutesFromRedis() {
 	var routes []types.Route
 	routesJSON, getErr := s.cache.GetAll("routes")
 	if getErr != nil {
@@ -55,12 +57,12 @@ func (s *Synchronizer) syncRoutes() {
 		routes = append(routes, route)
 	}
 
-	s.UpdateRoutes(routes...)
+	s.updateRoutingTable(routes...)
 	log.Printf("Updated routes successfully")
 }
 
 // UpdateRoutes is an atomic operation to update the routing table
-func (s *Synchronizer) UpdateRoutes(routes ...types.Route) {
+func (s *Synchronizer) updateRoutingTable(routes ...types.Route) {
 	s.routes.mux.Lock()
 	defer s.routes.mux.Unlock()
 	for _, route := range routes {
@@ -68,7 +70,6 @@ func (s *Synchronizer) UpdateRoutes(routes ...types.Route) {
 	}
 }
 
-// UpdateRoutes is an atomic operation to update the routing table
 func (s *Synchronizer) augmentRoute(route types.Route) types.Route {
 	var err error
 	parsedURL, _ := url.Parse(route.TargetURL)
@@ -80,9 +81,26 @@ func (s *Synchronizer) augmentRoute(route types.Route) types.Route {
 	return route
 }
 
+// DeleteRoute updates a route both in redis and in memory
+func (s *Synchronizer) DeleteRoute(id string) (int, error) {
+	s.routes.mux.Lock()
+	defer s.routes.mux.Unlock()
+	if _, ok := s.routes.routes[id]; ok {
+		delete(s.routes.routes, id)
+	} else {
+		return http.StatusNotFound, fmt.Errorf("Route not found for %s", id)
+	}
+	if cacheError := s.cache.DeleteField("routes", id); cacheError != nil {
+		log.Printf("Error removing route from cache: %v", cacheError)
+		return http.StatusInternalServerError, fmt.Errorf("Error removing route from cache: %v", cacheError)
+	}
+	log.Printf("Removed route from cache: %s", id)
+	return http.StatusNoContent, nil
+}
+
 // UpdateRoute updates a route both in redis and in memory
 func (s *Synchronizer) UpdateRoute(route types.Route) {
-	s.UpdateRoutes(route)
+	s.updateRoutingTable(route)
 	json, err := json.Marshal(route)
 	if err != nil {
 		log.Printf("Error marshalling route to JSON: %v", err)
@@ -95,7 +113,7 @@ func (s *Synchronizer) UpdateRoute(route types.Route) {
 	}
 }
 
-func (s *Synchronizer) updateRoutes() {
+func (s *Synchronizer) updateRoutesFromDocker() {
 	log.Print("Updating routes")
 	dockerRoutes := s.routePoller.Load()
 	for _, dockerRoute := range dockerRoutes {
@@ -110,9 +128,9 @@ func (s *Synchronizer) updateRoutes() {
 func (s *Synchronizer) Start() {
 	// This thread will continually get the routes from the cache and make them available
 	go func() {
-		s.syncRoutes()
+		s.syncRoutesFromRedis()
 		for {
-			err := s.cache.Subscribe("go-ocelot", s.syncRoutes)
+			err := s.cache.Subscribe("go-ocelot", s.syncRoutesFromRedis)
 			log.Printf("Subscription to updates lost, retrying in 10 seconds: %v", err)
 			time.Sleep(10 * time.Second)
 		}
@@ -120,10 +138,10 @@ func (s *Synchronizer) Start() {
 
 	// This thread will continually get the routes from the Docker sock and set them in the cache
 	go func() {
-		s.updateRoutes()
+		s.updateRoutesFromDocker()
 
 		for range time.Tick(s.interval * time.Second) {
-			s.updateRoutes()
+			s.updateRoutesFromDocker()
 		}
 	}()
 }

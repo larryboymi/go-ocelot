@@ -9,6 +9,7 @@ import (
 
 type Cache interface {
 	SetField(string, string, string) error
+	DeleteField(string, string) error
 	Get(string) ([]byte, error)
 	GetAll(key string) (map[string]string, error)
 	Subscribe(string, func()) error
@@ -26,6 +27,18 @@ func (c *PoolWrapper) SetField(key, field, value string) error {
 
 	conn.Send("PUBLISH", "go-ocelot", "updated")
 	if _, err := conn.Do("HSET", key, field, value); err != nil {
+		return err
+	}
+	return nil
+}
+
+// DeleteField removes a hash from a key
+func (c *PoolWrapper) DeleteField(key, field string) error {
+	conn := c.pool.Get()
+	defer conn.Close()
+
+	conn.Send("PUBLISH", "go-ocelot", "updated")
+	if _, err := conn.Do("HDEL", key, field); err != nil {
 		return err
 	}
 	return nil

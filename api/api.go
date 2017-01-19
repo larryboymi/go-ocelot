@@ -52,6 +52,7 @@ func (a API) routes(w http.ResponseWriter, r *http.Request) {
 		a.putRoute(w, r)
 	case "DELETE":
 		// Remove the record.
+		a.delRoute(w, r)
 	default:
 		// Give an error message.
 	}
@@ -69,6 +70,19 @@ func (a API) putRoute(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.sync.UpdateRoute(route)
+}
+
+func (a API) delRoute(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimPrefix(r.URL.Path, "/api/v1/routes/")
+
+	log.Printf("Trying to DELETE route for %s", id)
+
+	if status, err := a.sync.DeleteRoute(id); err != nil {
+		http.Error(w, err.Error(), status)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return
 }
 
 func (a API) getRoutes(w http.ResponseWriter, r *http.Request) {
