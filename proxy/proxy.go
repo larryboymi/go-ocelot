@@ -14,7 +14,7 @@ type Proxy struct {
 
 // Handler for serving requests
 func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Proxy handler trying to route %s with path %s", r.URL.Host, r.URL.Path)
+	log.Printf("Proxy handler trying to route %s with path %s", r.Host, r.URL.Path)
 	for _, route := range p.sync.Routes() {
 		if route.Regexp.MatchString(r.URL.Path) {
 			route.Proxy.ServeHTTP(w, r)

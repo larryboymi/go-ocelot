@@ -45,16 +45,14 @@ func (a API) routes(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		a.getRoutes(w, r)
 	case "POST":
-		// Create a new record.
 		a.putRoute(w, r)
 	case "PUT":
-		// Update an existing record.
 		a.putRoute(w, r)
 	case "DELETE":
-		// Remove the record.
 		a.delRoute(w, r)
 	default:
-		// Give an error message.
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
 	}
 }
 
