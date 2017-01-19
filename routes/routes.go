@@ -40,43 +40,49 @@ func (s *Synchronizer) Routes() map[string]types.Route {
 
 func (s *Synchronizer) syncRoutes() {
 	var routes []types.Route
-	routesJSON, getErr := s.cache.Get("routes")
-
+	routesJSON, getErr := s.cache.GetAll("routes")
 	if getErr != nil {
 		log.Printf("Error loading routes: %v", getErr)
 		return
 	}
-
-	err := json.Unmarshal(routesJSON, &routes)
-
-	if err != nil {
-		log.Print("Error syncing routes", err)
-		return
+	for _, routeStr := range routesJSON {
+		var route types.Route
+		err := json.Unmarshal([]byte(routeStr), &route)
+		if err != nil {
+			log.Print("Error syncing routes", err)
+			return
+		}
+		routes = append(routes, route)
 	}
 
-	s.UpdateRoutes(routes)
+	s.UpdateRoutes(routes...)
 	log.Printf("Updated routes successfully")
 }
 
 // UpdateRoutes is an atomic operation to update the routing table
-func (s *Synchronizer) UpdateRoutes(routes []types.Route) {
+func (s *Synchronizer) UpdateRoutes(routes ...types.Route) {
+	s.routes.mux.Lock()
+	defer s.routes.mux.Unlock()
 	for _, route := range routes {
-		s.UpdateRoute(route)
+		s.routes.routes[route.ID] = s.augmentRoute(route)
 	}
+}
+
+// UpdateRoutes is an atomic operation to update the routing table
+func (s *Synchronizer) augmentRoute(route types.Route) types.Route {
+	var err error
+	parsedURL, _ := url.Parse(route.TargetURL)
+	route.Regexp, err = regexp.Compile(route.IncomingMatch)
+	if err != nil {
+		log.Printf("Error compiling regexp for %s: %v", route.ID, err)
+	}
+	route.Proxy = httputil.NewSingleHostReverseProxy(parsedURL)
+	return route
 }
 
 // UpdateRoute updates a route both in redis and in memory
 func (s *Synchronizer) UpdateRoute(route types.Route) {
-	var err error
-	s.routes.mux.Lock()
-	defer s.routes.mux.Unlock()
-	url, _ := url.Parse(route.TargetURL)
-	route.Regexp, err = regexp.Compile(route.IncomingMatch)
-	if err != nil {
-		log.Printf("Error compiling regexp for %s: %v", route.ID, err)
-		err = nil
-	}
-	route.Proxy = httputil.NewSingleHostReverseProxy(url)
+	s.UpdateRoutes(route)
 	json, err := json.Marshal(route)
 	if err != nil {
 		log.Printf("Error marshalling route to JSON: %v", err)
@@ -86,7 +92,6 @@ func (s *Synchronizer) UpdateRoute(route types.Route) {
 		log.Printf("Error storing route in cache: %v", cacheError)
 	} else {
 		log.Printf("Stored route in cache: %s", string(json))
-		s.routes.routes[route.ID] = route
 	}
 }
 

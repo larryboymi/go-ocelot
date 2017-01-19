@@ -10,6 +10,7 @@ import (
 type Cache interface {
 	SetField(string, string, string) error
 	Get(string) ([]byte, error)
+	GetAll(key string) (map[string]string, error)
 	Subscribe(string, func()) error
 }
 
@@ -66,6 +67,19 @@ func (c *PoolWrapper) Get(key string) ([]byte, error) {
 	}
 
 	return b, nil
+}
+
+// GetAll hash fields from a key in redis
+func (c *PoolWrapper) GetAll(key string) (map[string]string, error) {
+	conn := c.pool.Get()
+	defer conn.Close()
+
+	result, err := redis.StringMap(conn.Do("HGETALL", key))
+	if err != nil {
+		return result, err
+	}
+
+	return result, nil
 }
 
 // New
