@@ -36,7 +36,7 @@ func (c *clientWrapper) GetServices(filter filters.Args) []swarm.Service {
 	return services
 }
 
-// NewClient returns a new instance of the HTTP client
+// New returns a new instance of the HTTP client
 func New() Client {
 	defaultHeaders := map[string]string{"User-Agent": "engine-api-cli-1.0"}
 	cli, err := client.NewClient("unix:///var/run/docker.sock", "v1.24", nil, defaultHeaders)

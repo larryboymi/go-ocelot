@@ -1,6 +1,6 @@
 package types
 
-// Route
+// Route is the stored route for a proxied service
 type Route struct {
 	ID         string
 	TargetPort int

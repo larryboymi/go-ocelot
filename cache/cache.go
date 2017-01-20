@@ -7,6 +7,7 @@ import (
 	"github.com/garyburd/redigo/redis"
 )
 
+// Cache is the interface to interact with an underlying cache
 type Cache interface {
 	SetField(string, string, string) error
 	DeleteField(string, string) error
@@ -15,7 +16,7 @@ type Cache interface {
 	Subscribe(string, func()) error
 }
 
-// PoolWrapper
+// PoolWrapper contains a pointer to the underlying connection pool.
 type PoolWrapper struct {
 	pool *redis.Pool
 }
@@ -95,7 +96,7 @@ func (c *PoolWrapper) GetAll(key string) (map[string]string, error) {
 	return result, nil
 }
 
-// New
+// New returns an initialized instance of a cache.
 func New(address string) Cache {
 	pool := &redis.Pool{
 		MaxIdle:     2,
