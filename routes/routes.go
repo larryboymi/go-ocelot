@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"sync"
 	"time"
 
@@ -64,14 +63,8 @@ func (s *Synchronizer) updateRoutingTable(routes ...types.Route) {
 	s.routes.mux.Lock()
 	defer s.routes.mux.Unlock()
 	for _, route := range routes {
-		s.routes.routes[route.ID] = s.augmentRoute(route)
+		s.routes.routes[route.ID] = route
 	}
-}
-
-func (s *Synchronizer) augmentRoute(route types.Route) types.Route {
-	parsedURL, _ := url.Parse(fmt.Sprintf("//%s:%d", route.ID, route.TargetPort))
-	route.Proxy = types.NewSingleHostReverseProxyHTTP(parsedURL)
-	return route
 }
 
 // DeleteRoute updates a route both in redis and in memory
