@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/larryboymi/go-ocelot/types"
@@ -9,8 +10,10 @@ import (
 
 // Handler for serving requests
 func (p *Proxy) findRoute(key string) *types.Route {
-	if route, ok := p.sync.Routes()[key]; ok {
-		return &route
+	for _, route := range p.sync.Routes() {
+		if route.ProxiedURL == key {
+			return &route
+		}
 	}
 	return nil
 }
@@ -20,6 +23,7 @@ func (p *Proxy) findRouteByPath(url string, pathDepth int) *types.Route {
 		return nil
 	}
 	key := strings.Join(strings.SplitN(url, "/", pathDepth), "/")
+	log.Printf("Searching for route with key %s", key)
 	if route := p.findRoute(key); route != nil {
 		return route
 	} else if route := p.findRoute(fmt.Sprintf("www.%s", key)); route != nil {

@@ -1,6 +1,9 @@
 package poller
 
 import (
+	"strconv"
+
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
 
 	"github.com/larryboymi/go-ocelot/docker"
@@ -18,8 +21,11 @@ type dockerWrapper struct {
 
 // LoadAll queries docker for its service and parses the ones with correct labels
 func (p *dockerWrapper) Load() []types.Route {
-	filters := map[string]string{"label": "ingress=true"}
-	services := p.client.GetServices(filters)
+	filter := filters.NewArgs()
+	filter.Add("label", "ingress=true")
+	filter.Add("label", "ingressport")
+
+	services := p.client.GetServices(filter)
 	return parseRoutes(services)
 }
 
@@ -27,11 +33,12 @@ func parseRoutes(services []swarm.Service) []types.Route {
 	var serviceList []types.Route
 
 	for _, s := range services {
-
-		serviceList = append(serviceList, types.Route{
-			ID:        s.Spec.Annotations.Name,
-			TargetURL: "http://" + s.Spec.Annotations.Name + ":" + s.Spec.Annotations.Labels["ingressport"],
-		})
+		if port, err := strconv.Atoi(s.Spec.Annotations.Labels["ingressport"]); err == nil {
+			serviceList = append(serviceList, types.Route{
+				ID:         s.Spec.Annotations.Name,
+				TargetPort: port,
+			})
+		}
 	}
 	return serviceList
 }

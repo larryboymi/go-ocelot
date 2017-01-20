@@ -15,11 +15,13 @@ type Proxy struct {
 // Handler for serving requests
 func (p *Proxy) Handler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Proxy handler trying to route %s with path %s", r.Host, r.URL.Path)
-	for _, route := range p.sync.Routes() {
-		if route.Regexp.MatchString(r.URL.Path) {
-			route.Proxy.ServeHTTP(w, r)
-			return
-		}
+	pathToMatch := ""
+	if r.URL.Path != "/" {
+		pathToMatch = r.URL.Path
+	}
+	if route := p.ResolveRoute(pathToMatch, r.Host); route != nil {
+		route.Proxy.ServeHTTP(w, r)
+		return
 	}
 	// no pattern matched; send 404 response
 	http.NotFound(w, r)

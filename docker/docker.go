@@ -16,21 +16,16 @@ type clientWrapper struct {
 
 // Client takes labels and returns matching docker services
 type Client interface {
-	GetServices(map[string]string) []swarm.Service
+	GetServices(filters.Args) []swarm.Service
 }
 
 // GetServices returns all Docker services matching the filter
-func (c *clientWrapper) GetServices(filterList map[string]string) []swarm.Service {
+func (c *clientWrapper) GetServices(filter filters.Args) []swarm.Service {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Print("Error getting services: ", r)
 		}
 	}()
-
-	filter := filters.NewArgs()
-	for k, v := range filterList {
-		filter.Add(k, v)
-	}
 
 	services, err := c.cli.ServiceList(context.Background(), types.ServiceListOptions{Filters: filter})
 	if err != nil {

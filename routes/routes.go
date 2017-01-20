@@ -8,9 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
-	"regexp"
 	"sync"
 	"time"
 
@@ -71,13 +69,8 @@ func (s *Synchronizer) updateRoutingTable(routes ...types.Route) {
 }
 
 func (s *Synchronizer) augmentRoute(route types.Route) types.Route {
-	var err error
-	parsedURL, _ := url.Parse(route.TargetURL)
-	route.Regexp, err = regexp.Compile(route.IncomingMatch)
-	if err != nil {
-		log.Printf("Error compiling regexp for %s: %v", route.ID, err)
-	}
-	route.Proxy = httputil.NewSingleHostReverseProxy(parsedURL)
+	parsedURL, _ := url.Parse(fmt.Sprintf("//%s:%d", route.ID, route.TargetPort))
+	route.Proxy = types.NewSingleHostReverseProxyRequestSchemed(parsedURL)
 	return route
 }
 

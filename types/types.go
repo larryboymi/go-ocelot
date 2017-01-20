@@ -1,15 +1,11 @@
 package types
 
-import (
-	"net/http/httputil"
-	"regexp"
-)
+import "net/http/httputil"
 
 // Route
 type Route struct {
-	ID            string
-	TargetURL     string
-	IncomingMatch string                 `json:",omitempty"`
-	Regexp        *regexp.Regexp         `json:"-"`
-	Proxy         *httputil.ReverseProxy `json:"-"`
+	ID         string
+	TargetPort int
+	ProxiedURL string                 `json:",omitempty"`
+	Proxy      *httputil.ReverseProxy `json:"-"`
 }
