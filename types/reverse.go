@@ -29,11 +29,7 @@ func singleJoiningSlash(a, b string) string {
 func NewSingleHostReverseProxyRequestSchemed(target *url.URL) *httputil.ReverseProxy {
 	targetQuery := target.RawQuery
 	director := func(req *http.Request) {
-		if req.TLS != nil { // let the incoming scheme be the scheme, extend if more are needed
-			req.URL.Scheme = "https"
-		} else {
-			req.URL.Scheme = "http"
-		}
+		req.URL.Scheme = "http" // terminate ssl here
 		req.URL.Host = target.Host
 		req.URL.Path = singleJoiningSlash(target.Path, req.URL.Path)
 		if targetQuery == "" || req.URL.RawQuery == "" {
