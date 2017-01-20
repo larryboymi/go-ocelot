@@ -70,7 +70,7 @@ func (s *Synchronizer) updateRoutingTable(routes ...types.Route) {
 
 func (s *Synchronizer) augmentRoute(route types.Route) types.Route {
 	parsedURL, _ := url.Parse(fmt.Sprintf("//%s:%d", route.ID, route.TargetPort))
-	route.Proxy = types.NewSingleHostReverseProxyRequestSchemed(parsedURL)
+	route.Proxy = types.NewSingleHostReverseProxyHTTP(parsedURL)
 	return route
 }
 

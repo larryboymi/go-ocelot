@@ -26,7 +26,7 @@ func singleJoiningSlash(a, b string) string {
 // NewSingleHostReverseProxy does not rewrite the Host header.
 // To rewrite Host headers, use ReverseProxy directly with a custom
 // Director policy.
-func NewSingleHostReverseProxyRequestSchemed(target *url.URL) *httputil.ReverseProxy {
+func NewSingleHostReverseProxyHTTP(target *url.URL) *httputil.ReverseProxy {
 	targetQuery := target.RawQuery
 	director := func(req *http.Request) {
 		req.URL.Scheme = "http" // terminate ssl here
