@@ -11,17 +11,16 @@ import (
 	"github.com/larryboymi/go-ocelot/types"
 )
 
-// Service is the interface for stored services
-// type Handler interface {
-// 	GetRoutes(w http.ResponseWriter, req *http.Request) ([]types.Route, error)
-// }
-
 // API is the type that handles routing api requests for go-ocelot
-type API struct {
-	sync *routes.Synchronizer
+type API interface {
+	Mux() *http.ServeMux
 }
 
-func (a API) echo(w http.ResponseWriter, r *http.Request) {
+type repoWrapper struct {
+	repo routes.Repository
+}
+
+func echo(w http.ResponseWriter, r *http.Request) {
 	var request []string
 	// Loop through headers
 	for name, headers := range r.Header {
@@ -40,23 +39,23 @@ func (a API) echo(w http.ResponseWriter, r *http.Request) {
 	w.Write(js)
 }
 
-func (a API) routes(w http.ResponseWriter, r *http.Request) {
+func (repo *repoWrapper) routes(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		a.getRoutes(w, r)
+		repo.getRoutes(w, r)
 	case "POST":
-		a.putRoute(w, r)
+		repo.putRoute(w, r)
 	case "PUT":
-		a.putRoute(w, r)
+		repo.putRoute(w, r)
 	case "DELETE":
-		a.delRoute(w, r)
+		repo.delRoute(w, r)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 }
 
-func (a API) putRoute(w http.ResponseWriter, r *http.Request) {
+func (repo *repoWrapper) putRoute(w http.ResponseWriter, r *http.Request) {
 	var route types.Route
 	if r.Body == nil {
 		http.Error(w, "Please send a request body", 400)
@@ -67,15 +66,15 @@ func (a API) putRoute(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
-	a.sync.UpdateRoute(route)
+	repo.repo.UpdateRoute(route)
 }
 
-func (a API) delRoute(w http.ResponseWriter, r *http.Request) {
+func (repo *repoWrapper) delRoute(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimPrefix(r.URL.Path, "/api/v1/routes/")
 
 	log.Printf("Trying to DELETE route for %s", id)
 
-	if status, err := a.sync.DeleteRoute(id); err != nil {
+	if status, err := repo.repo.DeleteRoute(id); err != nil {
 		http.Error(w, err.Error(), status)
 		return
 	}
@@ -83,18 +82,18 @@ func (a API) delRoute(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
-func (a API) getRoutes(w http.ResponseWriter, r *http.Request) {
+func (repo *repoWrapper) getRoutes(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimPrefix(r.URL.Path, "/api/v1/routes/")
 
 	var js []byte
 	var err error
-	routes := a.sync.Routes()
+	routes := repo.repo.Routes()
 
 	if id == "" {
-		js, err = json.Marshal(a.sync.Routes())
+		js, err = json.Marshal(repo.repo.Routes())
 	} else if route := routes[id]; route.ID != "" {
 		log.Printf("Trying to GET route for %s", id)
-		js, err = json.Marshal(a.sync.Routes()[id])
+		js, err = json.Marshal(repo.repo.Routes()[id])
 	} else {
 		http.NotFound(w, r)
 		return
@@ -109,16 +108,16 @@ func (a API) getRoutes(w http.ResponseWriter, r *http.Request) {
 }
 
 // Mux returns the path multiplexer for the API
-func (a API) Mux() *http.ServeMux {
+func (repo *repoWrapper) Mux() *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/v1/echo", a.echo)
-	mux.HandleFunc("/api/v1/routes/", a.routes)
+	mux.HandleFunc("/api/v1/echo", echo)
+	mux.HandleFunc("/api/v1/routes/", repo.routes)
 	return mux
 }
 
 // New returns a new instance of the proxy
-func New(sync *routes.Synchronizer) API {
-	return API{
-		sync: sync,
-	}
+func New(repo routes.Repository) API {
+	return API(&repoWrapper{
+		repo: repo,
+	})
 }

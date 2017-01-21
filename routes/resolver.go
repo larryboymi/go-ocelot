@@ -9,8 +9,8 @@ import (
 )
 
 // Handler for serving requests
-func (s *Synchronizer) findRoute(key string) *types.Route {
-	for _, route := range s.Routes() {
+func findRoute(key string, routes map[string]types.Route) *types.Route {
+	for _, route := range routes {
 		if route.ProxiedURL == key {
 			return &route
 		}
@@ -18,25 +18,25 @@ func (s *Synchronizer) findRoute(key string) *types.Route {
 	return nil
 }
 
-func (s *Synchronizer) findRouteByPath(url string, pathDepth int) *types.Route {
+func findRouteByPath(url string, pathDepth int, routes map[string]types.Route) *types.Route {
 	if pathDepth == 0 {
 		return nil
 	}
 	key := strings.Join(strings.SplitN(url, "/", pathDepth), "/")
 	log.Printf("Searching for route with key %s", key)
-	if route := s.findRoute(key); route != nil {
+	if route := findRoute(key, routes); route != nil {
 		return route
-	} else if route := s.findRoute(fmt.Sprintf("www.%s", key)); route != nil {
+	} else if route := findRoute(fmt.Sprintf("www.%s", key), routes); route != nil {
 		return route
 	} else {
-		return s.findRouteByPath(key, pathDepth-1)
+		return findRouteByPath(key, pathDepth-1, routes)
 	}
 }
 
 //ResolveRoute helps the proxy find a route for the incoming request
-func (s *Synchronizer) ResolveRoute(url, host string) *types.Route {
+func ResolveRoute(url, host string, routes map[string]types.Route) *types.Route {
 	url = strings.Split(url, "?")[0]
-	if closestRoute := s.findRouteByPath(fmt.Sprintf("%s%s", host, url), 4); closestRoute != nil {
+	if closestRoute := findRouteByPath(fmt.Sprintf("%s%s", host, url), 4, routes); closestRoute != nil {
 		return closestRoute
 	}
 	return nil

@@ -36,16 +36,16 @@ func start(args []string) {
 	fmt.Println(fmt.Sprintf("running on HTTP: %s, TLS: %s", config.serverPort, config.serverTLSPort))
 
 	//  Start Route Synchronizer
-	synchronizer := routes.New(10, *redisURL)
-	synchronizer.Start()
+	repo := routes.New(10, *redisURL)
+	repo.Start()
 
-	proxy := proxy.New(&synchronizer)
+	proxy := proxy.New(repo)
 
-	api := service.New(&synchronizer)
+	api := service.New(repo)
 
 	mux := http.NewServeMux()
 	mux.Handle("/api/", api.Mux())
-	mux.HandleFunc("/", proxy.Handler)
+	mux.HandleFunc("/", proxy.ServeHTTP)
 
 	loggedHandler := middleware.LoggedHandler(mux)
 	headeredHandler := middleware.HeaderedHandler(loggedHandler)

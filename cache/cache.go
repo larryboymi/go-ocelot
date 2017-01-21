@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"errors"
 	"time"
 
 	"github.com/garyburd/redigo/redis"
@@ -11,18 +10,16 @@ import (
 type Cache interface {
 	SetField(string, string, string) error
 	DeleteField(string, string) error
-	Get(string) ([]byte, error)
 	GetAll(key string) (map[string]string, error)
 	Subscribe(string, func()) error
 }
 
-// PoolWrapper contains a pointer to the underlying connection pool.
-type PoolWrapper struct {
+type poolWrapper struct {
 	pool *redis.Pool
 }
 
 // SetField sets a key to a value
-func (c *PoolWrapper) SetField(key, field, value string) error {
+func (c *poolWrapper) SetField(key, field, value string) error {
 	conn := c.pool.Get()
 	defer conn.Close()
 
@@ -34,7 +31,7 @@ func (c *PoolWrapper) SetField(key, field, value string) error {
 }
 
 // DeleteField removes a hash from a key
-func (c *PoolWrapper) DeleteField(key, field string) error {
+func (c *poolWrapper) DeleteField(key, field string) error {
 	conn := c.pool.Get()
 	defer conn.Close()
 
@@ -46,7 +43,7 @@ func (c *PoolWrapper) DeleteField(key, field string) error {
 }
 
 // Subscribe subscribes to a key and calls a function when messages are received
-func (c *PoolWrapper) Subscribe(channel string, action func()) error {
+func (c *poolWrapper) Subscribe(channel string, action func()) error {
 	conn := c.pool.Get()
 	defer conn.Close()
 
@@ -63,28 +60,8 @@ func (c *PoolWrapper) Subscribe(channel string, action func()) error {
 	}
 }
 
-// Get retrieves a key from redis
-func (c *PoolWrapper) Get(key string) ([]byte, error) {
-	var s []byte
-
-	conn := c.pool.Get()
-	defer conn.Close()
-
-	result, err := conn.Do("HGETALL", key)
-	if err != nil {
-		return s, err
-	}
-
-	b, ok := result.([]byte)
-	if !ok {
-		return s, errors.New("Failed to parse value as a string")
-	}
-
-	return b, nil
-}
-
 // GetAll hash fields from a key in redis
-func (c *PoolWrapper) GetAll(key string) (map[string]string, error) {
+func (c *poolWrapper) GetAll(key string) (map[string]string, error) {
 	conn := c.pool.Get()
 	defer conn.Close()
 
@@ -98,7 +75,7 @@ func (c *PoolWrapper) GetAll(key string) (map[string]string, error) {
 
 // New returns an initialized instance of a cache.
 func New(address string) Cache {
-	pool := &redis.Pool{
+	return Cache(&poolWrapper{pool: &redis.Pool{
 		MaxIdle:     2,
 		IdleTimeout: 300 * time.Second,
 		Dial: func() (redis.Conn, error) {
@@ -108,7 +85,5 @@ func New(address string) Cache {
 			_, err := c.Do("PING")
 			return err
 		},
-	}
-
-	return Cache(&PoolWrapper{pool: pool})
+	}})
 }

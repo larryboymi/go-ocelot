@@ -10,13 +10,13 @@ import (
 	"golang.org/x/net/context"
 )
 
-type clientWrapper struct {
-	cli *client.Client
-}
-
 // Client takes labels and returns matching docker services
 type Client interface {
 	GetServices(filters.Args) []swarm.Service
+}
+
+type clientWrapper struct {
+	cli *client.Client
 }
 
 // GetServices returns all Docker services matching the filter
