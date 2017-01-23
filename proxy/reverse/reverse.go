@@ -6,7 +6,7 @@ import (
 	"net/http/httputil"
 	"strings"
 
-	"github.com/larryboymi/go-ocelot/routes"
+	"github.com/ocelotconsulting/go-ocelot/routes"
 )
 
 func singleJoiningSlash(a, b string) string {

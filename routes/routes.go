@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/larryboymi/go-ocelot/cache"
-	"github.com/larryboymi/go-ocelot/poller"
-	"github.com/larryboymi/go-ocelot/types"
+	"github.com/ocelotconsulting/go-ocelot/cache"
+	"github.com/ocelotconsulting/go-ocelot/poller"
+	"github.com/ocelotconsulting/go-ocelot/types"
 )
 
 // Repository contains the routes for the proxy

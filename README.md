@@ -5,13 +5,13 @@ A reverse proxy written in golang
 Currently under development (Jan 12, 2017)
 
 ## To run locally
-    $ go install github.com/larryboymi/go-ocelot
+    $ go install github.com/ocelotconsulting/go-ocelot
     $ $GOPATH/bin/go-ocelot
 
 ## Docker
 1. Build the image
 
-        $ docker build --build-arg GO_MAIN=github.com/larryboymi/go-ocelot --build-arg GO_MAIN_EXEC=go-ocelot -t go-ocelot:dev .
+        $ docker build --build-arg GO_MAIN=github.com/ocelotconsulting/go-ocelot --build-arg GO_MAIN_EXEC=go-ocelot -t go-ocelot:dev .
 
 2. To run using docker:
 

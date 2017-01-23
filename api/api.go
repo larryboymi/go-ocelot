@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/larryboymi/go-ocelot/routes"
-	"github.com/larryboymi/go-ocelot/types"
+	"github.com/ocelotconsulting/go-ocelot/routes"
+	"github.com/ocelotconsulting/go-ocelot/types"
 )
 
 // API is the type that handles routing api requests for go-ocelot

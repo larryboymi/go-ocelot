@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/larryboymi/go-ocelot/types"
+	"github.com/ocelotconsulting/go-ocelot/types"
 )
 
 // Handler for serving requests

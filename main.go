@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"os"
 
-	service "github.com/larryboymi/go-ocelot/api"
-	"github.com/larryboymi/go-ocelot/middleware"
-	"github.com/larryboymi/go-ocelot/proxy"
-	"github.com/larryboymi/go-ocelot/routes"
+	service "github.com/ocelotconsulting/go-ocelot/api"
+	"github.com/ocelotconsulting/go-ocelot/middleware"
+	"github.com/ocelotconsulting/go-ocelot/proxy"
+	"github.com/ocelotconsulting/go-ocelot/routes"
 )
 
 // Config type

@@ -5,8 +5,8 @@ import (
 
 	"github.com/docker/docker/api/types/filters"
 
-	"github.com/larryboymi/go-ocelot/docker"
-	"github.com/larryboymi/go-ocelot/types"
+	"github.com/ocelotconsulting/go-ocelot/docker"
+	"github.com/ocelotconsulting/go-ocelot/types"
 )
 
 // Poller for routes

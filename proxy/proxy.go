@@ -4,8 +4,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/larryboymi/go-ocelot/proxy/reverse"
-	"github.com/larryboymi/go-ocelot/routes"
+	"github.com/ocelotconsulting/go-ocelot/proxy/reverse"
+	"github.com/ocelotconsulting/go-ocelot/routes"
 )
 
 //New returns a handler that will proxy incoming requests
