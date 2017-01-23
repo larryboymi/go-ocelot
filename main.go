@@ -13,8 +13,7 @@ import (
 	"github.com/ocelotconsulting/go-ocelot/routes"
 )
 
-// Config type
-type Config struct {
+type ports struct {
 	serverPort    string
 	serverTLSPort string
 }
@@ -24,7 +23,7 @@ func main() {
 }
 
 func start(args []string) {
-	config := &Config{
+	config := &ports{
 		serverPort:    "0.0.0.0:8080",
 		serverTLSPort: "0.0.0.0:8443",
 	}
