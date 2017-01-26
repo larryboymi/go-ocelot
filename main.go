@@ -48,17 +48,18 @@ func start(args []string) {
 
 	loggedHandler := middleware.LoggedHandler(mux)
 	headeredHandler := middleware.HeaderedHandler(loggedHandler)
+	corsHandler := middleware.CORSHandler(headeredHandler)
 
 	//  Start HTTP
 	go func() {
-		errHTTP := http.ListenAndServe(config.serverPort, headeredHandler)
+		errHTTP := http.ListenAndServe(config.serverPort, corsHandler)
 		if errHTTP != nil {
 			log.Fatal("HTTP Serving Error: ", errHTTP)
 		}
 	}()
 
 	// Start TLS
-	errTLS := http.ListenAndServeTLS(config.serverTLSPort, "cert.pem", "key.pem", headeredHandler)
+	errTLS := http.ListenAndServeTLS(config.serverTLSPort, "cert.pem", "key.pem", corsHandler)
 	if errTLS != nil {
 		log.Fatal("TLS Serving Error: ", errTLS)
 	}
