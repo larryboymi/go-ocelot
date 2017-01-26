@@ -40,5 +40,5 @@ func (p *dockerWrapper) Load() []types.Route {
 
 //New poller
 func New() Poller {
-	return Poller(&dockerWrapper{client: docker.New()})
+	return &dockerWrapper{client: docker.New()}
 }
